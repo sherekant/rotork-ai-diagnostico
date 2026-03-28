@@ -4,16 +4,17 @@ from groq import Groq
 
 app = Flask(__name__)
 
-# 🔑 Leer API KEY desde Railway (VARIABLE DE ENTORNO)
+# 🔑 Leer API KEY
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
-# Validación
-if not GROQ_API_KEY:
-    print("❌ ERROR: GROQ_API_KEY no está configurada")
-else:
-    print("✅ API KEY cargada correctamente")
+client = None
 
-client = Groq(api_key=GROQ_API_KEY)
+# ✅ SOLO crear cliente si existe la API KEY
+if GROQ_API_KEY:
+    client = Groq(api_key=GROQ_API_KEY)
+    print("✅ API KEY cargada correctamente")
+else:
+    print("⚠️ API KEY NO CONFIGURADA")
 
 @app.route('/')
 def home():
@@ -24,21 +25,21 @@ def analizar():
     try:
         descripcion = request.form.get('descripcion', '')
 
-        if not GROQ_API_KEY:
+        # 🚨 Validación segura
+        if not client:
             return jsonify({
-                "respuesta": "❌ API KEY no configurada en el servidor (Railway)"
+                "respuesta": "❌ API KEY no configurada en Railway (verifica variables)"
             })
 
         prompt = f"""
         Actúa como experto en actuadores Rotork.
-        Diagnostica la siguiente falla:
 
         Falla: {descripcion}
 
-        Da:
-        - Posible causa
-        - Verificación recomendada
-        - Acción correctiva
+        Entrega:
+        - Causa probable
+        - Cómo verificar
+        - Solución recomendada
         """
 
         response = client.chat.completions.create(
@@ -53,7 +54,9 @@ def analizar():
         return jsonify({"respuesta": respuesta})
 
     except Exception as e:
-        return jsonify({"respuesta": f"Error: {str(e)}"})
+        return jsonify({
+            "respuesta": f"❌ Error interno: {str(e)}"
+        })
 
 # 🔥 IMPORTANTE PARA RAILWAY
 if __name__ == "__main__":
